@@ -2,6 +2,7 @@
   "name": "@usageapp/windows",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "Windows tray and desktop widget for UsageApp.",
   "author": "UsageApp",
   "main": "dist/main/index.js",

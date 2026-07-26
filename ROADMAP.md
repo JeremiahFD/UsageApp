@@ -25,6 +25,8 @@ to a particular design or release date.
 - Never collect prompts, responses, credentials, access tokens, account IDs, or
   unrelated telemetry fields.
 - Keep the Android companion Codex-only initially.
+- Package and publish an Android APK after physical-device validation of
+  pairing, secure token storage, cached viewing, refresh, and revocation.
 
 Claude detail collection would be forward-looking: history would begin only
 after the user opts in and starts a new Claude Code session. It would describe
