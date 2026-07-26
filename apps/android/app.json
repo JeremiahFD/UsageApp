@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "Usage Viewer",
+    "slug": "usageapp-viewer",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#090d12",
+    "newArchEnabled": true,
+    "android": {
+      "package": "com.usageapp.viewer",
+      "versionCode": 1,
+      "backgroundColor": "#090d12",
+      "allowBackup": false,
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.VIBRATE"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true
+        }
+      ],
+      "expo-system-ui",
+      [
+        "expo-status-bar",
+        {
+          "style": "light"
+        }
+      ]
+    ]
+  }
+}

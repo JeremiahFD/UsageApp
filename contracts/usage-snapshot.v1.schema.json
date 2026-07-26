@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://usageapp.local/contracts/usage-snapshot.v1.schema.json",
+  "title": "UsageApp usage snapshot v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "providerId",
+    "providerName",
+    "observedAt",
+    "status",
+    "windows",
+    "bankedResets",
+    "credits",
+    "planType",
+    "tokenUsage",
+    "message"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "providerId": { "type": "string", "minLength": 1 },
+    "providerName": { "type": "string", "minLength": 1 },
+    "observedAt": { "type": "string", "format": "date-time" },
+    "status": {
+      "enum": ["live", "stale", "auth-required", "unavailable"]
+    },
+    "windows": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/usageWindow" }
+    },
+    "bankedResets": { "$ref": "#/$defs/bankedResetSummary" },
+    "credits": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/creditSummary" }
+      ]
+    },
+    "planType": { "type": ["string", "null"] },
+    "tokenUsage": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/tokenUsage" }
+      ]
+    },
+    "message": { "type": ["string", "null"] }
+  },
+  "$defs": {
+    "usageWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "limitId",
+        "limitName",
+        "kind",
+        "label",
+        "usedPercent",
+        "remainingPercent",
+        "durationMinutes",
+        "resetsAt"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "limitId": { "type": "string" },
+        "limitName": { "type": ["string", "null"] },
+        "kind": { "enum": ["primary", "secondary"] },
+        "label": { "type": "string" },
+        "usedPercent": { "type": "number", "minimum": 0, "maximum": 100 },
+        "remainingPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "durationMinutes": { "type": ["number", "null"], "minimum": 0 },
+        "resetsAt": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        }
+      }
+    },
+    "bankedReset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "description",
+        "status",
+        "grantedAt",
+        "expiresAt"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": ["string", "null"] },
+        "description": { "type": ["string", "null"] },
+        "status": { "type": "string" },
+        "grantedAt": { "type": "string", "format": "date-time" },
+        "expiresAt": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        }
+      }
+    },
+    "bankedResetSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["availableCount", "detailsAvailable", "items"],
+      "properties": {
+        "availableCount": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "detailsAvailable": { "type": "boolean" },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/bankedReset" }
+        }
+      }
+    },
+    "creditSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hasCredits", "unlimited", "balance"],
+      "properties": {
+        "hasCredits": { "type": "boolean" },
+        "unlimited": { "type": "boolean" },
+        "balance": { "type": ["string", "null"] }
+      }
+    },
+    "tokenUsage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lifetimeTokens",
+        "peakDailyTokens",
+        "longestRunningTurnSec",
+        "currentStreakDays",
+        "longestStreakDays",
+        "dailyUsageBuckets"
+      ],
+      "properties": {
+        "lifetimeTokens": { "type": ["number", "null"], "minimum": 0 },
+        "peakDailyTokens": { "type": ["number", "null"], "minimum": 0 },
+        "longestRunningTurnSec": {
+          "type": ["number", "null"],
+          "minimum": 0
+        },
+        "currentStreakDays": { "type": ["number", "null"], "minimum": 0 },
+        "longestStreakDays": { "type": ["number", "null"], "minimum": 0 },
+        "dailyUsageBuckets": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["startDate", "tokens"],
+                "properties": {
+                  "startDate": { "type": "string", "format": "date" },
+                  "tokens": { "type": "number", "minimum": 0 }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

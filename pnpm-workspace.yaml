@@ -1,0 +1,13 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Expo supports isolated pnpm installs, but native CMake paths can exceed
+# Windows' path limit. Its official monorepo guidance recommends hoisting when
+# isolated installs cause native build errors.
+nodeLinker: hoisted
+
+allowBuilds:
+  electron: true
+  electron-winstaller: false
+  esbuild: true

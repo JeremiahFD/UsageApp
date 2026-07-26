@@ -34,6 +34,38 @@ unrecognized-app warning. Verify the SHA-256 value before running it.
 - Codex desktop or the Codex CLI
 - A signed-in Codex account
 
+## Source and development
+
+This repository contains the buildable source for the stable `0.1.0` Windows
+tray application, its shared snapshot contract, and the Codex-only Android
+companion.
+
+```text
+apps/windows/   Electron tray, flyout, compact widget, and phone-sync host
+apps/android/   Expo Android companion
+packages/core/  Shared types, normalization, decoding, and formatting
+contracts/      Versioned phone snapshot schema
+docs/           Architecture and verification notes
+```
+
+Development requires Node.js 24.3 or newer and pnpm 11:
+
+```powershell
+pnpm install
+pnpm test
+pnpm typecheck
+pnpm dev:windows
+```
+
+Create a local unsigned Windows installer with:
+
+```powershell
+pnpm package:windows
+```
+
+The output is written under `apps/windows/release/`. Android native folders are
+generated on demand and intentionally are not committed.
+
 ## Privacy
 
 UsageApp talks to the documented local Codex app-server. It does not scrape the
@@ -47,10 +79,11 @@ See [PRIVACY.md](PRIVACY.md) for the complete data-handling summary.
 
 ## Project status
 
-Version 0.1.0 is the first public preview. This public repository currently
-hosts release builds and user documentation. New analytics-dashboard and
-Claude-provider development remains private until it is ready for a stable
-public release.
+Version 0.1.0 is the first public preview and the source in the default branch
+matches that stable feature set. Analytics-dashboard and Claude-provider work
+is unreleased, in development, and subject to change. See
+[ROADMAP.md](ROADMAP.md) for the current direction; there is no promised
+release date.
 
 Please use [GitHub Issues](https://github.com/JeremiahFD/UsageApp/issues) for
 bugs and feature requests.

@@ -1,4 +1,48 @@
+# Dependencies and package-manager state
+node_modules/
+.pnpm-store/
+
+# Build and packaging output
+dist/
+release/
+artifacts/
+*.blockmap
+.old-asar/
+.old-installer-extract/
+
+# Expo and generated native projects
+.expo/
+.expo-shared/
+apps/android/android/
+apps/android/ios/
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.pfx
+*.p12
+*.key
+*.cer
+*.mobileprovision
+google-services.json
+GoogleService-Info.plist
+
+# Local settings, caches, and logs
 *.log
 *.tmp
+*.bak
+*.local
+.cache/
+.vite/
+coverage/
+
+# Editors and operating systems
+.idea/
+.vscode/
+*.suo
+*.user
 .DS_Store
 Thumbs.db
+desktop.ini
