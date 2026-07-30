@@ -3,6 +3,7 @@ import {
   BrowserWindow,
   ipcMain,
   Menu,
+  Notification,
   powerMonitor,
   screen,
   Tray,
@@ -18,9 +19,13 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   IPC,
+  type ClaudeIntegrationStatus,
   type DesktopState,
   type PairingCodeInfo,
+  type ProviderDesktopState,
+  type UsageAnalytics,
 } from "../shared/desktop";
+import { ClaudeController } from "./claude-controller";
 import { PhoneSyncServer } from "./phone-sync-server";
 import { SettingsStore } from "./settings-store";
 import { createTrayIcon } from "./tray-icon";
@@ -30,18 +35,26 @@ const FLYOUT_WIDTH = 410;
 const FLYOUT_HEIGHT = 650;
 const WIDGET_WIDTH = 320;
 const WIDGET_HEIGHT = 146;
+const WIDGET_HEIGHT_BOTH = 176;
+const DASHBOARD_WIDTH = 1_180;
+const DASHBOARD_HEIGHT = 800;
 const WINDOW_MARGIN = 12;
 
 let tray: Tray | null = null;
+let claudeTray: Tray | null = null;
 let flyoutWindow: BrowserWindow | null = null;
 let widgetWindow: BrowserWindow | null = null;
+let dashboardWindow: BrowserWindow | null = null;
+let trayIconSettingsWindow: BrowserWindow | null = null;
 let settingsStore: SettingsStore | null = null;
 let usageController: UsageController | null = null;
+let claudeController: ClaudeController | null = null;
 let phoneSyncServer: PhoneSyncServer | null = null;
 let isQuitting = false;
 let trayInteractionUntil = 0;
 let phoneSyncBindingTimer: NodeJS.Timeout | null = null;
 let settingsApplyQueue: Promise<void> = Promise.resolve();
+const alertedThresholds = new Map<string, { resetAt: string | null; remaining: number; thresholds: Set<number> }>();
 
 const launchedHidden = process.argv.includes("--hidden");
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
@@ -50,13 +63,94 @@ function currentSettings(): AppSettings {
   return settingsStore?.get() ?? { ...DEFAULT_SETTINGS };
 }
 
+function trayIconStyle(settings: AppSettings) {
+  return {
+    preset: settings.trayIconPreset,
+    shape: settings.trayIconShape,
+    content: settings.trayIconContent,
+    fill: settings.trayIconFill,
+    border: settings.trayIconBorder,
+    codexColor: settings.trayIconCodexColor,
+    claudeColor: settings.trayIconClaudeColor,
+    textTone: settings.trayIconTextTone,
+    codexTextColor: settings.trayIconCodexTextColor,
+    claudeTextColor: settings.trayIconClaudeTextColor,
+    maximizeText: settings.trayIconMaximizeText,
+    font: settings.trayIconFont,
+  } as const;
+}
+
+function emptyClaudeAnalytics(): UsageAnalytics {
+  return {
+    source: "claude-otel",
+    observedAt: new Date().toISOString(),
+    recordingSince: null,
+    buckets: [],
+    capabilities: {
+      dailyTotals: false,
+      tokenCategories: false,
+      modelFilter: false,
+      reasoningFilter: false,
+      estimatedCost: false,
+      tokensPerMinute: false,
+    },
+    message:
+      "Connect Claude to begin recording local Claude Code activity. Historical data starts after connection.",
+  };
+}
+
+function disconnectedClaudeStatus(): ClaudeIntegrationStatus {
+  return {
+    state: "disconnected",
+    statusLineConfigured: false,
+    telemetryConfigured: false,
+    statusLineConnected: false,
+    telemetryConnected: false,
+    receiverListening: false,
+    message: "Claude monitoring is not connected.",
+  };
+}
+
 function currentState(): DesktopState {
   const settings = currentSettings();
-  return {
-    settings,
+  const codexProvider: ProviderDesktopState = {
+    id: "openai-codex",
+    name: "Codex",
     snapshot: usageController?.snapshot ?? null,
+    analytics:
+      usageController?.analytics ?? {
+        source: "codex-account",
+        observedAt: new Date().toISOString(),
+        recordingSince: null,
+        buckets: [],
+        capabilities: {
+          dailyTotals: false,
+          tokenCategories: false,
+          modelFilter: false,
+          reasoningFilter: false,
+          estimatedCost: false,
+          tokensPerMinute: false,
+        },
+        message: "Waiting for Codex activity history.",
+      },
     refreshPhase: usageController?.phase ?? "starting",
     lastError: usageController?.lastError ?? null,
+    liveDetails: null,
+  };
+  const claudeProvider: ProviderDesktopState = {
+    id: "anthropic-claude",
+    name: "Claude",
+    snapshot: claudeController?.snapshot ?? null,
+    analytics: claudeController?.analytics ?? emptyClaudeAnalytics(),
+    refreshPhase: claudeController?.phase ?? "idle",
+    lastError: claudeController?.lastError ?? null,
+    liveDetails: claudeController?.liveDetails ?? null,
+  };
+  return {
+    settings,
+    snapshot: codexProvider.snapshot,
+    refreshPhase: codexProvider.refreshPhase,
+    lastError: codexProvider.lastError,
     phoneSync:
       phoneSyncServer?.status() ?? {
         enabled: settings.phoneSyncEnabled,
@@ -67,6 +161,10 @@ function currentState(): DesktopState {
         pairingCodeActive: false,
         error: null,
       },
+    activeProviderId: settings.activeProviderId,
+    providers: [codexProvider, claudeProvider],
+    claudeIntegration:
+      claudeController?.integrationStatus ?? disconnectedClaudeStatus(),
   };
 }
 
@@ -83,20 +181,74 @@ function sendState(window: BrowserWindow | null, state: DesktopState): void {
 
 function updateUi(): void {
   const state = currentState();
+  notifyUsageThresholds(state);
   if (tray) {
-    const summary = state.snapshot
-      ? summarizeForTray(state.snapshot)
+    const codexProvider = state.providers.find(
+      (provider) => provider.id === "openai-codex",
+    );
+    const activeProvider = state.settings.trayProviderDisplay === "both"
+      ? codexProvider
+      : state.providers.find((provider) => provider.id === state.activeProviderId) ?? state.providers[0];
+    const summary = activeProvider?.snapshot
+      ? summarizeForTray(activeProvider.snapshot)
       : {
           percentage: null,
-          tooltip: "Codex Usage — starting",
+          tooltip: `${activeProvider?.name ?? "AI"} Usage — starting`,
           nextResetAt: null,
         };
-    tray.setImage(createTrayIcon(summary.percentage));
+    tray.setImage(createTrayIcon(
+      summary.percentage,
+      activeProvider?.id === "anthropic-claude" ? "claude" : "codex",
+      trayIconStyle(state.settings),
+    ));
     tray.setToolTip(summary.tooltip);
-    updateTrayMenu(state.settings);
+    updateTrayMenu(
+      state.settings,
+      tray,
+      state.settings.trayProviderDisplay === "both" ? "openai-codex" : null,
+    );
+    if (state.settings.trayProviderDisplay === "both") {
+      const claude = state.providers.find((provider) => provider.id === "anthropic-claude");
+      if (!claudeTray) claudeTray = createTray("anthropic-claude");
+      const claudeSummary = claude?.snapshot ? summarizeForTray(claude.snapshot) : { percentage: null, tooltip: "Claude Usage - start Claude Code" };
+      claudeTray.setImage(createTrayIcon(
+        claudeSummary.percentage,
+        "claude",
+        trayIconStyle(state.settings),
+      ));
+      claudeTray.setToolTip(claudeSummary.tooltip);
+      updateTrayMenu(state.settings, claudeTray, "anthropic-claude");
+    } else if (claudeTray) {
+      claudeTray.destroy();
+      claudeTray = null;
+    }
   }
   sendState(flyoutWindow, state);
   sendState(widgetWindow, state);
+  sendState(dashboardWindow, state);
+  sendState(trayIconSettingsWindow, state);
+}
+
+function notifyUsageThresholds(state: DesktopState): void {
+  if (!state.settings.usageAlertsEnabled || !Notification.isSupported()) return;
+  for (const provider of state.providers) {
+    for (const windowItem of provider.snapshot?.windows ?? []) {
+      const key = `${provider.id}:${windowItem.id}`;
+      const remaining = Math.round(windowItem.remainingPercent);
+      const previous = alertedThresholds.get(key);
+      const resetChanged = previous?.resetAt !== windowItem.resetsAt || (previous !== undefined && remaining > previous.remaining);
+      const thresholds = resetChanged ? new Set<number>() : previous?.thresholds ?? new Set<number>();
+      if (previous) {
+        for (const threshold of state.settings.usageAlertThresholds) {
+          if (previous.remaining > threshold && remaining <= threshold && !thresholds.has(threshold)) {
+            new Notification({ title: `${provider.name} usage warning`, body: `${windowItem.label} has ${remaining}% remaining${windowItem.resetsAt ? ` until its next reset.` : "."}` }).show();
+            thresholds.add(threshold);
+          }
+        }
+      }
+      alertedThresholds.set(key, { resetAt: windowItem.resetsAt, remaining, thresholds });
+    }
+  }
 }
 
 function positionFlyout(): void {
@@ -115,15 +267,37 @@ function positionWidget(): void {
   const { x, y, width, height } = screen.getPrimaryDisplay().workArea;
   widgetWindow.setPosition(
     Math.round(x + width - WIDGET_WIDTH - WINDOW_MARGIN),
-    Math.round(y + height - WIDGET_HEIGHT - WINDOW_MARGIN),
+    Math.round(y + height - widgetHeight(currentSettings()) - WINDOW_MARGIN),
     false,
   );
+}
+
+function widgetHeight(settings: AppSettings): number {
+  const baseHeight = settings.widgetProviderDisplay === "both" ? WIDGET_HEIGHT_BOTH : WIDGET_HEIGHT;
+  return Math.round(baseHeight * (settings.widgetTextScale / 100));
 }
 
 function showFlyout(): void {
   const window = flyoutWindow;
   if (!window || window.isDestroyed()) return;
   positionFlyout();
+  const show = () => {
+    if (window.isDestroyed()) return;
+    window.show();
+    window.focus();
+  };
+  if (window.webContents.isLoadingMainFrame()) {
+    window.webContents.once("did-finish-load", show);
+  } else {
+    show();
+  }
+}
+
+function showDashboard(): void {
+  if (!dashboardWindow || dashboardWindow.isDestroyed()) {
+    dashboardWindow = createDashboardWindow();
+  }
+  const window = dashboardWindow;
   const show = () => {
     if (window.isDestroyed()) return;
     window.show();
@@ -144,7 +318,14 @@ function toggleFlyout(): void {
   }
 }
 
-function rendererUrl(view: "flyout" | "widget"): string | null {
+async function showFlyoutForProvider(providerId: AppSettings["activeProviderId"]): Promise<void> {
+  if (currentSettings().activeProviderId !== providerId) {
+    await applySettingsPatch({ activeProviderId: providerId });
+  }
+  showFlyout();
+}
+
+function rendererUrl(view: "flyout" | "widget" | "dashboard" | "tray-icons"): string | null {
   if (app.isPackaged) return null;
   const developmentServer = process.env.VITE_DEV_SERVER_URL;
   if (!developmentServer) return null;
@@ -208,7 +389,7 @@ function secureWindow(window: BrowserWindow): void {
 
 async function loadRenderer(
   window: BrowserWindow,
-  view: "flyout" | "widget",
+  view: "flyout" | "widget" | "dashboard" | "tray-icons",
 ): Promise<void> {
   const developmentUrl = rendererUrl(view);
   if (developmentUrl) {
@@ -218,6 +399,88 @@ async function loadRenderer(
       query: { view },
     });
   }
+}
+
+function createDashboardWindow(): BrowserWindow {
+  const window = new BrowserWindow({
+    title: "UsageApp dashboard",
+    width: DASHBOARD_WIDTH,
+    height: DASHBOARD_HEIGHT,
+    minWidth: 900,
+    minHeight: 620,
+    show: false,
+    frame: true,
+    resizable: true,
+    maximizable: true,
+    minimizable: true,
+    fullscreenable: true,
+    skipTaskbar: false,
+    autoHideMenuBar: true,
+    backgroundColor: "#0b1018",
+    webPreferences: {
+      preload: join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      spellcheck: false,
+    },
+  });
+  secureWindow(window);
+  window.on("closed", () => {
+    if (dashboardWindow === window) {
+      dashboardWindow = null;
+    }
+  });
+  window.webContents.on("did-finish-load", () => {
+    sendState(window, currentState());
+  });
+  void loadRenderer(window, "dashboard");
+  return window;
+}
+
+function createTrayIconSettingsWindow(): BrowserWindow {
+  const window = new BrowserWindow({
+    title: "UsageApp tray icons",
+    width: 640,
+    height: 650,
+    minWidth: 540,
+    minHeight: 560,
+    show: false,
+    frame: true,
+    resizable: true,
+    maximizable: false,
+    autoHideMenuBar: true,
+    backgroundColor: "#0b1018",
+    webPreferences: {
+      preload: join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      spellcheck: false,
+    },
+  });
+  secureWindow(window);
+  window.on("closed", () => {
+    if (trayIconSettingsWindow === window) trayIconSettingsWindow = null;
+  });
+  window.webContents.on("did-finish-load", () => sendState(window, currentState()));
+  void loadRenderer(window, "tray-icons");
+  return window;
+}
+
+function showTrayIconSettings(): void {
+  if (!trayIconSettingsWindow || trayIconSettingsWindow.isDestroyed()) {
+    trayIconSettingsWindow = createTrayIconSettingsWindow();
+  }
+  const window = trayIconSettingsWindow;
+  const show = () => {
+    if (!window.isDestroyed()) {
+      window.show();
+      window.focus();
+    }
+  };
+  if (window.webContents.isLoadingMainFrame()) window.webContents.once("did-finish-load", show);
+  else show();
 }
 
 function createFlyoutWindow(): BrowserWindow {
@@ -270,14 +533,15 @@ function createFlyoutWindow(): BrowserWindow {
 }
 
 function createWidgetWindow(): BrowserWindow {
+  const height = widgetHeight(currentSettings());
   const window = new BrowserWindow({
     title: "UsageApp compact widget",
     width: WIDGET_WIDTH,
-    height: WIDGET_HEIGHT,
+    height,
     minWidth: WIDGET_WIDTH,
     maxWidth: WIDGET_WIDTH,
-    minHeight: WIDGET_HEIGHT,
-    maxHeight: WIDGET_HEIGHT,
+    minHeight: height,
+    maxHeight: height,
     show: false,
     frame: false,
     resizable: false,
@@ -310,6 +574,10 @@ function syncWidgetVisibility(settings: AppSettings): void {
     if (!widgetWindow || widgetWindow.isDestroyed()) {
       widgetWindow = createWidgetWindow();
     } else {
+      const height = widgetHeight(settings);
+      widgetWindow.setMinimumSize(WIDGET_WIDTH, height);
+      widgetWindow.setMaximumSize(WIDGET_WIDTH, height);
+      widgetWindow.setSize(WIDGET_WIDTH, height);
       positionWidget();
       widgetWindow.showInactive();
     }
@@ -330,12 +598,24 @@ function applyLoginSetting(settings: AppSettings): void {
   });
 }
 
+async function refreshProviders(): Promise<void> {
+  await Promise.all([
+    usageController?.refresh(),
+    claudeController?.refresh(),
+  ]);
+}
+
 function applySettingsPatch(
   patch: Partial<AppSettings>,
 ): Promise<DesktopState> {
   let result: DesktopState | null = null;
   const operation = settingsApplyQueue.then(async () => {
-    if (!settingsStore || !usageController || !phoneSyncServer) {
+    if (
+      !settingsStore ||
+      !usageController ||
+      !claudeController ||
+      !phoneSyncServer
+    ) {
       throw new Error("UsageApp is still starting.");
     }
     const previous = settingsStore.get();
@@ -343,7 +623,10 @@ function applySettingsPatch(
     usageController.updateSettings(settings);
     applyLoginSetting(settings);
     syncWidgetVisibility(settings);
-    await phoneSyncServer.configure(settings);
+    await Promise.all([
+      phoneSyncServer.configure(settings),
+      claudeController.configure(settings),
+    ]);
     updateUi();
 
     if (previous.codexCommand !== settings.codexCommand) {
@@ -362,6 +645,85 @@ function applySettingsPatch(
   });
 }
 
+function connectClaude(): Promise<DesktopState> {
+  let result: DesktopState | null = null;
+  const operation = settingsApplyQueue.then(async () => {
+    if (!settingsStore || !claudeController) {
+      throw new Error("UsageApp is still starting.");
+    }
+
+    await claudeController.connect();
+    const status = claudeController.integrationStatus;
+    if (
+      claudeController.lastError ||
+      status.state === "error" ||
+      status.state === "disconnected"
+    ) {
+      await claudeController.configure(settingsStore.get());
+      updateUi();
+      throw new Error(
+        claudeController.lastError ??
+          status.message ??
+          "Claude monitoring could not connect.",
+      );
+    }
+
+    let settings: AppSettings;
+    try {
+      settings = await settingsStore.update({
+        claudeEnabled: true,
+      });
+    } catch (error) {
+      await claudeController.disconnect();
+      updateUi();
+      throw error;
+    }
+    await claudeController.configure(settings);
+    updateUi();
+    result = currentState();
+  });
+  settingsApplyQueue = operation.catch(() => {
+    // Keep later settings and provider actions usable.
+  });
+  return operation.then(() => {
+    if (!result) {
+      throw new Error("Claude monitoring was not connected.");
+    }
+    return result;
+  });
+}
+
+function disconnectClaude(): Promise<DesktopState> {
+  let result: DesktopState | null = null;
+  const operation = settingsApplyQueue.then(async () => {
+    if (!settingsStore || !claudeController) {
+      throw new Error("UsageApp is still starting.");
+    }
+
+    await claudeController.disconnect();
+    let settings: AppSettings;
+    try {
+      settings = await settingsStore.update({ claudeEnabled: false });
+    } catch (error) {
+      await claudeController.connect();
+      updateUi();
+      throw error;
+    }
+    await claudeController.configure(settings);
+    updateUi();
+    result = currentState();
+  });
+  settingsApplyQueue = operation.catch(() => {
+    // Keep later settings and provider actions usable.
+  });
+  return operation.then(() => {
+    if (!result) {
+      throw new Error("Claude monitoring was not disconnected.");
+    }
+    return result;
+  });
+}
+
 function reconfigurePhoneSync(): Promise<void> {
   const operation = settingsApplyQueue.then(async () => {
     if (!phoneSyncServer || !settingsStore) return;
@@ -374,18 +736,29 @@ function reconfigurePhoneSync(): Promise<void> {
   return operation;
 }
 
-function updateTrayMenu(settings: AppSettings): void {
-  if (!tray) return;
+function updateTrayMenu(
+  settings: AppSettings,
+  target: Tray | null = tray,
+  providerId: AppSettings["activeProviderId"] | null = null,
+): void {
+  if (!target) return;
   const template: MenuItemConstructorOptions[] = [
     {
-      label: "Open Codex usage",
-      click: () => showFlyout(),
+      label: "Open usage flyout",
+      click: () => {
+        if (providerId) void showFlyoutForProvider(providerId);
+        else showFlyout();
+      },
     },
     {
       label: "Refresh now",
       click: () => {
-        void usageController?.refresh();
+        void refreshProviders();
       },
+    },
+    {
+      label: "Open full dashboard",
+      click: () => showDashboard(),
     },
     { type: "separator" },
     {
@@ -405,16 +778,24 @@ function updateTrayMenu(settings: AppSettings): void {
       },
     },
   ];
-  tray.setContextMenu(Menu.buildFromTemplate(template));
+  target.setContextMenu(Menu.buildFromTemplate(template));
 }
 
-function createTray(): Tray {
+function createTray(
+  providerId: AppSettings["activeProviderId"] | null = null,
+): Tray {
   const nextTray = new Tray(createTrayIcon(null));
-  nextTray.setToolTip("Codex Usage — starting");
+  nextTray.setToolTip("UsageApp — starting");
   nextTray.on("mouse-down", () => {
     trayInteractionUntil = Date.now() + 250;
   });
-  nextTray.on("click", () => toggleFlyout());
+  nextTray.on("click", () => {
+    const fixedProviderId = currentSettings().trayProviderDisplay === "both"
+      ? providerId
+      : null;
+    if (fixedProviderId) void showFlyoutForProvider(fixedProviderId);
+    else toggleFlyout();
+  });
   return nextTray;
 }
 
@@ -425,7 +806,7 @@ function registerIpc(): void {
   });
   ipcMain.handle(IPC.refresh, async (event) => {
     assertTrustedIpc(event);
-    await usageController?.refresh();
+    await refreshProviders();
     return currentState();
   });
   ipcMain.handle(
@@ -448,6 +829,14 @@ function registerIpc(): void {
     updateUi();
     return currentState();
   });
+  ipcMain.handle(IPC.connectClaude, async (event) => {
+    assertTrustedIpc(event);
+    return connectClaude();
+  });
+  ipcMain.handle(IPC.disconnectClaude, async (event) => {
+    assertTrustedIpc(event);
+    return disconnectClaude();
+  });
   ipcMain.handle(IPC.hideFlyout, (event) => {
     assertTrustedIpc(event);
     flyoutWindow?.hide();
@@ -455,6 +844,14 @@ function registerIpc(): void {
   ipcMain.handle(IPC.showFlyout, (event) => {
     assertTrustedIpc(event);
     showFlyout();
+  });
+  ipcMain.handle(IPC.showDashboard, (event) => {
+    assertTrustedIpc(event);
+    showDashboard();
+  });
+  ipcMain.handle(IPC.showTrayIconSettings, (event) => {
+    assertTrustedIpc(event);
+    showTrayIconSettings();
   });
   ipcMain.handle(IPC.quit, (event) => {
     assertTrustedIpc(event);
@@ -469,6 +866,11 @@ async function startApplication(): Promise<void> {
   settingsStore = new SettingsStore(app.getPath("userData"));
   const settings = await settingsStore.load();
   usageController = new UsageController(settings, updateUi);
+  claudeController = new ClaudeController(
+    app.getPath("userData"),
+    settings,
+    updateUi,
+  );
   phoneSyncServer = new PhoneSyncServer(
     app.getPath("userData"),
     () => usageController?.snapshot ?? null,
@@ -477,11 +879,14 @@ async function startApplication(): Promise<void> {
   );
 
   flyoutWindow = createFlyoutWindow();
-  tray = createTray();
+  tray = createTray("openai-codex");
   registerIpc();
   applyLoginSetting(settings);
   syncWidgetVisibility(settings);
-  await phoneSyncServer.configure(settings);
+  await Promise.all([
+    phoneSyncServer.configure(settings),
+    claudeController.start(),
+  ]);
   updateUi();
   usageController.start();
 
@@ -491,7 +896,7 @@ async function startApplication(): Promise<void> {
 
   powerMonitor.on("resume", () => {
     void reconfigurePhoneSync();
-    void usageController?.refresh();
+    void refreshProviders();
   });
   phoneSyncBindingTimer = setInterval(() => {
     if (currentSettings().phoneSyncEnabled) {
@@ -517,6 +922,7 @@ if (!hasSingleInstanceLock) {
       phoneSyncBindingTimer = null;
     }
     usageController?.stop();
+    void claudeController?.stop();
     void phoneSyncServer?.stop();
   });
   app.on("window-all-closed", () => {

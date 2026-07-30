@@ -1,9 +1,9 @@
 {
   "name": "usageapp",
-  "version": "0.1.0",
+  "version": "0.2.0-beta.1",
   "private": true,
   "license": "MIT",
-  "description": "A privacy-first Codex usage monitor for Windows, with an Android companion.",
+  "description": "A privacy-first Codex and Claude usage monitor for Windows, with a Codex Android companion.",
   "packageManager": "pnpm@11.2.2",
   "engines": {
     "node": ">=24.3.0"

@@ -1,28 +1,56 @@
-# Verification
+# Verification record
 
-Run the following from the repository root:
+## Windows 0.2.0 Beta 1
 
-```powershell
-pnpm install
-pnpm test
-pnpm typecheck
-pnpm build:windows
-pnpm build:android
-```
+Verified on Windows 11 on 2026-07-30:
 
-`pnpm test` exercises the shared provider normalization and formatting
-contract. `pnpm typecheck` checks the shared package and both application
-projects. The Windows build compiles the Electron main process, preload bridge,
-and renderer.
+- `pnpm install --frozen-lockfile`
+- `pnpm test`: 11 core tests and 40 Windows tests passed
+- `pnpm typecheck`: core, Windows, and Android passed
+- `pnpm build:windows`: production main, preload, and renderer bundles passed
+- `pnpm package:windows`: x64 NSIS packaging passed
+- Public screenshots were rendered from the built interface using synthetic
+  data and visually reviewed
+- A privacy scan of source, screenshots, packaged ASAR, and installer found no
+  personal home paths, private-repository names, email addresses, or common
+  credential patterns
 
-The Android build generates native project files locally. Those generated
-folders are intentionally excluded from version control.
+Release artifact:
 
-## Release limits
+- `UsageApp-0.2.0-beta.1-x64.exe`
+- Size: `99,786,851` bytes
+- SHA-256:
+  `B6B45F2BBEC05BE942A9F269AAEF804A2A86568979B03E4EEE11B1339FF44426`
 
-A passing Windows build does not validate Android behavior. Before describing
-an APK as production-ready, install it on a physical Android device and verify
-pairing, secure token storage, cached-state behavior, refresh, and revocation.
+The locally installed Windows beta was started without restarting Windows.
+Hands-on behavior can still vary with notification-area overflow settings,
+display scaling, accessibility settings, and provider session state.
 
-The Windows installer is unsigned unless normal Authenticode signing
-credentials are supplied. Publish its SHA-256 checksum with every release.
+## Android source
+
+`pnpm build:android` passed from the shorter development checkout after the
+Android/core/contract source was content-compared with this public export.
+Building from the longer temporary public-checkout path hit Windows' native
+260-character filename limit.
+
+That build proves the source can produce an APK. It does **not** prove physical
+phone behavior. The Android companion remains unreleased until installation,
+pairing, secure token storage, cached viewing, refresh, accessibility, and
+revocation are tested on physical devices.
+
+## Provider limits
+
+- Codex history currently lacks historical model and reasoning-level
+  attribution.
+- Claude shared-plan percentages require an eligible live Claude Code
+  status-line update.
+- Claude detailed history is forward-looking local activity after connection,
+  not complete past account history.
+- The installer is not Authenticode-signed and may trigger SmartScreen.
+
+## Previous 0.1.0 beta
+
+The tag remains `v0.1.0`, but the GitHub release is labeled as the first public
+beta. Its previously published Windows installer SHA-256 was:
+
+`8D2955EC194019163AA84CFFA6FFF32CFF43169172B9B561DF8C310943967146`

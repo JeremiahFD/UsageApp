@@ -4,6 +4,45 @@ export type SnapshotStatus =
   | "auth-required"
   | "unavailable";
 
+export type ProviderId = "openai-codex" | "anthropic-claude";
+export type ProviderDisplayMode = "active" | "both";
+export type TrayIconPreset = "classic" | "solid-letter" | "solid-percent" | "badge" | "high-contrast" | "colored-text" | "custom";
+export type TrayIconShape = "circle" | "rounded-square";
+export type TrayIconContent = "percent" | "provider" | "auto";
+export type TrayIconFill = "solid" | "dark" | "transparent";
+export type TrayIconBorder = "none" | "thin" | "thick";
+export type TrayIconTextTone = "auto" | "light" | "dark" | "provider" | "custom";
+/**
+ * Tray icons are drawn pixel by pixel rather than with a system font, so each
+ * option is a hand-built bitmap face rather than a font family name.
+ */
+export type TrayIconFont = "classic" | "bold" | "rounded";
+export type InterfaceFont =
+  | "system"
+  | "segoe-ui"
+  | "verdana"
+  | "tahoma"
+  | "arial"
+  | "trebuchet-ms"
+  | "georgia"
+  | "consolas";
+
+export interface TrayIconSavedPreset {
+  id: string;
+  name: string;
+  shape: TrayIconShape;
+  content: TrayIconContent;
+  fill: TrayIconFill;
+  border: TrayIconBorder;
+  codexColor: string;
+  claudeColor: string;
+  textTone: TrayIconTextTone;
+  codexTextColor: string;
+  claudeTextColor: string;
+  maximizeText: boolean;
+  font: TrayIconFont;
+}
+
 export interface UsageWindow {
   id: string;
   limitId: string;
@@ -38,7 +77,20 @@ export interface BankedResetSummary {
 export interface CreditSummary {
   hasCredits: boolean;
   unlimited: boolean;
+  /**
+   * Provider-formatted balance. Kept as a string because the provider owns the
+   * currency and precision; UsageApp must never reinterpret it as a number.
+   */
   balance: string | null;
+  /**
+   * True when a spending control has stopped further paid usage. Null when the
+   * provider did not say. This lives beside credits rather than inside the
+   * provider's credits object, but it is what a spending limit looks like to
+   * someone reading the panel.
+   */
+  spendControlReached: boolean | null;
+  /** Which limit the account ran into, when the provider names one. */
+  rateLimitReachedType: string | null;
 }
 
 export interface TokenUsageDailyBucket {
@@ -81,6 +133,38 @@ export interface AppSettings {
    * second. Any other value is treated as an explicit executable path.
    */
   codexCommand: string;
+  activeProviderId: ProviderId;
+  claudeEnabled: boolean;
+  claudeTelemetryPort: number;
+  /** Extra dashboard scale on top of Windows display scaling. */
+  dashboardTextScale: 100 | 125 | 150 | 175;
+  /** Extra scale for the taskbar-side flyout. */
+  flyoutTextScale: 100 | 125 | 150 | 175;
+  /** Extra scale for the bottom-right compact widget. */
+  widgetTextScale: 100 | 125 | 150 | 175;
+  /** Font used by every Windows surface except the native tray-number bitmap. */
+  interfaceFont: InterfaceFont;
+  /** One active tray icon, or one labelled icon for each provider. */
+  trayProviderDisplay: ProviderDisplayMode;
+  trayIconPreset: TrayIconPreset;
+  trayIconShape: TrayIconShape;
+  trayIconContent: TrayIconContent;
+  trayIconFill: TrayIconFill;
+  trayIconBorder: TrayIconBorder;
+  trayIconCodexColor: string;
+  trayIconClaudeColor: string;
+  trayIconTextTone: TrayIconTextTone;
+  trayIconCodexTextColor: string;
+  trayIconClaudeTextColor: string;
+  trayIconMaximizeText: boolean;
+  trayIconFont: TrayIconFont;
+  trayIconSavedPresets: TrayIconSavedPreset[];
+  trayIconActiveSavedPresetId: string | null;
+  /** One active compact widget readout, or a readout for each provider. */
+  widgetProviderDisplay: ProviderDisplayMode;
+  usageAlertsEnabled: boolean;
+  /** Remaining-percent thresholds, sorted high to low. */
+  usageAlertThresholds: number[];
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -91,6 +175,31 @@ export const DEFAULT_SETTINGS: AppSettings = {
   phoneSyncEnabled: false,
   phoneSyncPort: 47_831,
   codexCommand: "auto",
+  activeProviderId: "openai-codex",
+  claudeEnabled: false,
+  claudeTelemetryPort: 47_832,
+  dashboardTextScale: 125,
+  flyoutTextScale: 125,
+  widgetTextScale: 125,
+  interfaceFont: "system",
+  trayProviderDisplay: "active",
+  trayIconPreset: "classic",
+  trayIconShape: "circle",
+  trayIconContent: "auto",
+  trayIconFill: "dark",
+  trayIconBorder: "thick",
+  trayIconCodexColor: "#38bdf8",
+  trayIconClaudeColor: "#e89a62",
+  trayIconTextTone: "auto",
+  trayIconCodexTextColor: "#38bdf8",
+  trayIconClaudeTextColor: "#e89a62",
+  trayIconMaximizeText: false,
+  trayIconFont: "classic",
+  trayIconSavedPresets: [],
+  trayIconActiveSavedPresetId: null,
+  widgetProviderDisplay: "active",
+  usageAlertsEnabled: false,
+  usageAlertThresholds: [25, 10],
 };
 
 export interface PairRequest {

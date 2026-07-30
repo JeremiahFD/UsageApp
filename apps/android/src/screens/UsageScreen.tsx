@@ -1,5 +1,6 @@
 import {
   formatRelativeTime,
+  formatObservedTime,
   formatResetTime,
   getMostConstrainedRemaining,
   type UsageSnapshot,
@@ -145,7 +146,7 @@ export function UsageScreen({
     constrained === null ? null : clampPercent(Math.round(constrained));
   const heroColor = remaining === null ? colors.textMuted : remainingColor(remaining);
   const observedRelative = formatRelativeTime(snapshot.observedAt, now);
-  const observedExact = formatResetTime(snapshot.observedAt, now);
+  const observedExact = formatObservedTime(snapshot.observedAt);
   const isDisconnected = !paired;
   const isOffline = Boolean(refreshError) || isDisconnected;
   const isSynchronizing = paired && refreshing;
@@ -244,7 +245,7 @@ export function UsageScreen({
           </Text>
           <Text style={styles.heroTitle}>Most limited window</Text>
           <Text style={styles.heroMeta}>
-            Updated {observedRelative} · {observedExact}
+            Last known usage {observedExact} · {observedRelative}
           </Text>
         </View>
         <View style={[styles.heroGauge, { borderColor: heroColor }]}>

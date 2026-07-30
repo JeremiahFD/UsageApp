@@ -5,12 +5,13 @@ import {
   type AppSettings,
   type UsageSnapshot,
 } from "@usageapp/core";
-import type { RefreshPhase } from "../shared/desktop";
+import type { RefreshPhase, UsageAnalytics } from "../shared/desktop";
 import {
   CodexAppServerClient,
   errorMessage,
   looksLikeAuthenticationError,
 } from "./codex-client";
+import { codexAnalyticsFromSnapshot } from "./provider-analytics";
 
 export class UsageController {
   private readonly client: CodexAppServerClient;
@@ -44,6 +45,10 @@ export class UsageController {
 
   get lastError(): string | null {
     return this.errorValue;
+  }
+
+  get analytics(): UsageAnalytics {
+    return codexAnalyticsFromSnapshot(this.snapshotValue);
   }
 
   start(): void {

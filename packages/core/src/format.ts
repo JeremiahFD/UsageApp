@@ -1,4 +1,4 @@
-import type { TraySummary, UsageSnapshot } from "./types";
+import type { CreditSummary, TraySummary, UsageSnapshot } from "./types";
 
 const compactNumber = new Intl.NumberFormat(undefined, {
   notation: "compact",
@@ -11,6 +11,70 @@ export function formatPercent(value: number): string {
 
 export function formatTokenCount(value: number | null): string {
   return value === null ? "Unavailable" : compactNumber.format(value);
+}
+
+export interface CreditDisplay {
+  /** The one value worth reading at a glance. */
+  headline: string;
+  /** Short qualifier, or null when the headline says everything. */
+  detail: string | null;
+  /** Drives emphasis: a zero balance should stay quiet, a block should not. */
+  tone: "none" | "normal" | "warning";
+  /** False when the provider reports no credit facility at all. */
+  present: boolean;
+}
+
+/**
+ * Describes a credit balance for display.
+ *
+ * Deliberately conservative: the provider supplies only a formatted balance,
+ * an availability flag, and a spend-control flag, so this reports exactly
+ * those. There is no credit limit, renewal date, or payment-method field in
+ * the payload, and none is inferred here.
+ */
+export function describeCredits(
+  credits: CreditSummary | null,
+): CreditDisplay {
+  if (credits === null) {
+    return {
+      headline: "None",
+      detail: null,
+      tone: "none",
+      present: false,
+    };
+  }
+  if (credits.spendControlReached === true) {
+    return {
+      headline: credits.unlimited ? "Unlimited" : credits.balance ?? "—",
+      detail: "Spending limit reached",
+      tone: "warning",
+      present: true,
+    };
+  }
+  if (credits.unlimited) {
+    return {
+      headline: "Unlimited",
+      detail: null,
+      tone: "normal",
+      present: true,
+    };
+  }
+  if (!credits.hasCredits) {
+    // A zero balance is the ordinary state on a subscription plan, so it is
+    // reported plainly rather than as a problem.
+    return {
+      headline: "None",
+      detail: credits.balance === null ? null : `Balance ${credits.balance}`,
+      tone: "none",
+      present: true,
+    };
+  }
+  return {
+    headline: credits.balance ?? "Available",
+    detail: credits.balance === null ? null : "Available",
+    tone: "normal",
+    present: true,
+  };
 }
 
 export function formatResetTime(
@@ -40,6 +104,19 @@ export function formatResetTime(
     weekday: "short",
     month: "short",
     day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+export function formatObservedTime(iso: string | null): string {
+  if (!iso) return "Date unavailable";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Date unavailable";
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
     hour: "numeric",
     minute: "2-digit",
   }).format(date);
@@ -94,17 +171,20 @@ function shortWindowLabel(label: string): string {
 
 export function summarizeForTray(snapshot: UsageSnapshot): TraySummary {
   const percentage = getMostConstrainedRemaining(snapshot);
+  const observedLabel = `Last known usage ${formatObservedTime(snapshot.observedAt)} (${formatRelativeTime(snapshot.observedAt)})`;
   if (snapshot.status === "auth-required") {
     return {
       percentage: null,
-      tooltip: "Codex Usage — sign in to Codex",
+      tooltip: `${snapshot.providerName} Usage — sign in required • ${observedLabel}`,
       nextResetAt: null,
     };
   }
   if (snapshot.windows.length === 0) {
     return {
       percentage: null,
-      tooltip: `Codex Usage — ${snapshot.status === "live" ? "no limits returned" : "unavailable"}`,
+      tooltip: `${snapshot.providerName} Usage — ${
+        snapshot.status === "live" ? "no limits returned" : "unavailable"
+      } • ${observedLabel}`,
       nextResetAt: null,
     };
   }
@@ -133,7 +213,7 @@ export function summarizeForTray(snapshot: UsageSnapshot): TraySummary {
 
   return {
     percentage,
-    tooltip: `Codex Usage — ${stalePrefix}${fragments.join(" • ")}`,
+    tooltip: `${snapshot.providerName} Usage — ${stalePrefix}${fragments.join(" • ")} • ${observedLabel}`,
     nextResetAt: resetTimes.at(0)?.value ?? null,
   };
 }
