@@ -14,6 +14,7 @@ type JsonObject = Record<string, unknown>;
 function isObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+
 function isNullableString(value: unknown): value is string | null {
   return value === null || typeof value === "string";
 }

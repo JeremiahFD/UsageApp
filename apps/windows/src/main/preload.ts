@@ -16,8 +16,15 @@ const bridge: UsageAppBridge = {
     ipcRenderer.invoke(IPC.createPairingCode) as Promise<PairingCodeInfo>,
   revokePhoneTokens: () =>
     ipcRenderer.invoke(IPC.revokePhoneTokens) as Promise<DesktopState>,
+  connectClaude: () =>
+    ipcRenderer.invoke(IPC.connectClaude) as Promise<DesktopState>,
+  disconnectClaude: () =>
+    ipcRenderer.invoke(IPC.disconnectClaude) as Promise<DesktopState>,
   hideFlyout: () => ipcRenderer.invoke(IPC.hideFlyout) as Promise<void>,
   showFlyout: () => ipcRenderer.invoke(IPC.showFlyout) as Promise<void>,
+  showDashboard: () => ipcRenderer.invoke(IPC.showDashboard) as Promise<void>,
+  showTrayIconSettings: () =>
+    ipcRenderer.invoke(IPC.showTrayIconSettings) as Promise<void>,
   quit: () => ipcRenderer.invoke(IPC.quit) as Promise<void>,
   onStateChanged: (listener: (state: DesktopState) => void) => {
     const wrapped = (_event: Electron.IpcRendererEvent, state: DesktopState) => {

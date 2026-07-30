@@ -141,7 +141,15 @@ function rateLimitSnapshots(response: JsonObject): Array<[string, RawRateLimitSn
   return [];
 }
 
-function normalizeCredits(raw: unknown): CreditSummary | null {
+/**
+ * @param snapshot The rate-limit snapshot, not its `credits` member: the
+ * spending signals sit beside `credits` rather than inside it.
+ */
+function normalizeCredits(snapshot: unknown): CreditSummary | null {
+  if (!isObject(snapshot)) {
+    return null;
+  }
+  const raw = snapshot.credits;
   if (
     !isObject(raw) ||
     typeof raw.hasCredits !== "boolean" ||
@@ -153,6 +161,11 @@ function normalizeCredits(raw: unknown): CreditSummary | null {
     hasCredits: raw.hasCredits,
     unlimited: raw.unlimited,
     balance: stringOrNull(raw.balance),
+    spendControlReached:
+      typeof snapshot.spendControlReached === "boolean"
+        ? snapshot.spendControlReached
+        : null,
+    rateLimitReachedType: stringOrNull(snapshot.rateLimitReachedType),
   };
 }
 
@@ -277,8 +290,8 @@ export function normalizeCodexSnapshot(
   const preferred =
     snapshots.find(([id]) => id === "codex")?.[1] ?? snapshots.at(0)?.[1] ?? null;
   const credits =
-    normalizeCredits(preferred?.credits) ??
-    snapshots.map(([, value]) => normalizeCredits(value.credits)).find(Boolean) ??
+    normalizeCredits(preferred) ??
+    snapshots.map(([, value]) => normalizeCredits(value)).find(Boolean) ??
     null;
   const planType =
     stringOrNull(preferred?.planType) ??

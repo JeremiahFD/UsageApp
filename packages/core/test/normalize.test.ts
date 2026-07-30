@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   decodeUsageSnapshot,
+  describeCredits,
   formatRelativeTime,
   formatWindowDuration,
   getMostConstrainedRemaining,
@@ -111,6 +112,7 @@ describe("normalizeCodexSnapshot", () => {
     expect(snapshot.tokenUsage?.lifetimeTokens).toBe(123_456);
     expect(getMostConstrainedRemaining(snapshot)).toBe(40);
     expect(summarizeForTray(snapshot).tooltip).toContain("40% left");
+    expect(summarizeForTray(snapshot).tooltip).toContain("Last known usage");
   });
 
   it("preserves an authoritative count when reset details are unavailable", () => {
@@ -184,6 +186,93 @@ describe("normalizeCodexSnapshot", () => {
         bankedResets: {},
       }),
     ).toBeNull();
+  });
+});
+
+describe("credits", () => {
+  it("reads the spending signals that sit beside the credits object", () => {
+    const snapshot = normalizeCodexSnapshot({
+      rateLimits: {
+        limitId: "codex",
+        primary: { usedPercent: 25, windowDurationMins: 300, resetsAt: 1_900_000_000 },
+        credits: { hasCredits: false, unlimited: false, balance: "0" },
+        spendControlReached: true,
+        rateLimitReachedType: "weekly",
+        planType: "prolite",
+      },
+    }, null);
+
+    expect(snapshot.credits).toEqual({
+      hasCredits: false,
+      unlimited: false,
+      balance: "0",
+      spendControlReached: true,
+      rateLimitReachedType: "weekly",
+    });
+  });
+
+  it("reports absent spending signals as unknown rather than false", () => {
+    const snapshot = normalizeCodexSnapshot({
+      rateLimits: {
+        limitId: "codex",
+        primary: { usedPercent: 25, windowDurationMins: 300, resetsAt: 1_900_000_000 },
+        credits: { hasCredits: false, unlimited: false, balance: "0" },
+      },
+    }, null);
+
+    expect(snapshot.credits?.spendControlReached).toBeNull();
+    expect(snapshot.credits?.rateLimitReachedType).toBeNull();
+  });
+
+  it("describes a zero balance quietly and a spending block loudly", () => {
+    expect(describeCredits(null)).toMatchObject({
+      headline: "None",
+      tone: "none",
+      present: false,
+    });
+    expect(
+      describeCredits({
+        hasCredits: false,
+        unlimited: false,
+        balance: "0",
+        spendControlReached: false,
+        rateLimitReachedType: null,
+      }),
+    ).toMatchObject({ headline: "None", tone: "none", present: true });
+    expect(
+      describeCredits({
+        hasCredits: true,
+        unlimited: false,
+        balance: "12.50",
+        spendControlReached: true,
+        rateLimitReachedType: null,
+      }),
+    ).toMatchObject({
+      headline: "12.50",
+      detail: "Spending limit reached",
+      tone: "warning",
+    });
+    expect(
+      describeCredits({
+        hasCredits: true,
+        unlimited: true,
+        balance: null,
+        spendControlReached: false,
+        rateLimitReachedType: null,
+      }),
+    ).toMatchObject({ headline: "Unlimited", tone: "normal" });
+  });
+
+  it("never reinterprets the provider's formatted balance", () => {
+    const display = describeCredits({
+      hasCredits: true,
+      unlimited: false,
+      balance: "$1,234.50",
+      spendControlReached: false,
+      rateLimitReachedType: null,
+    });
+
+    expect(display.headline).toBe("$1,234.50");
   });
 });
 
