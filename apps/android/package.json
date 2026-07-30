@@ -2,6 +2,7 @@
   "name": "@usageapp/android",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
