@@ -1,6 +1,7 @@
 import {
   app,
   BrowserWindow,
+  dialog,
   ipcMain,
   Menu,
   Notification,
@@ -29,6 +30,7 @@ import { ClaudeController } from "./claude-controller";
 import { PhoneSyncServer } from "./phone-sync-server";
 import { SettingsStore } from "./settings-store";
 import { createTrayIcon } from "./tray-icon";
+import { savedTrayPresetPatch } from "./tray-preset";
 import { UsageController } from "./usage-controller";
 
 const FLYOUT_WIDTH = 410;
@@ -46,6 +48,9 @@ let flyoutWindow: BrowserWindow | null = null;
 let widgetWindow: BrowserWindow | null = null;
 let dashboardWindow: BrowserWindow | null = null;
 let trayIconSettingsWindow: BrowserWindow | null = null;
+let trayIconSettingsDirty = false;
+let trayIconSettingsCloseConfirmed = false;
+let trayIconSettingsClosePromptOpen = false;
 let settingsStore: SettingsStore | null = null;
 let usageController: UsageController | null = null;
 let claudeController: ClaudeController | null = null;
@@ -460,8 +465,44 @@ function createTrayIconSettingsWindow(): BrowserWindow {
     },
   });
   secureWindow(window);
+  window.on("close", (event) => {
+    if (
+      isQuitting ||
+      !trayIconSettingsDirty ||
+      trayIconSettingsCloseConfirmed
+    ) {
+      return;
+    }
+    event.preventDefault();
+    if (trayIconSettingsClosePromptOpen) return;
+    trayIconSettingsClosePromptOpen = true;
+    void dialog.showMessageBox(window, {
+      type: "warning",
+      title: "Unsaved taskbar preset",
+      message: "Discard your unsaved taskbar preset changes?",
+      detail:
+        "The taskbar icon will return to the last saved version of this preset.",
+      buttons: ["Keep editing", "Discard changes"],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+    }).then(async ({ response }) => {
+      trayIconSettingsClosePromptOpen = false;
+      if (response !== 1 || window.isDestroyed()) return;
+      const restorePatch = savedTrayPresetPatch(currentSettings());
+      if (restorePatch) await applySettingsPatch(restorePatch);
+      trayIconSettingsDirty = false;
+      trayIconSettingsCloseConfirmed = true;
+      if (!window.isDestroyed()) window.close();
+    }).catch(() => {
+      trayIconSettingsClosePromptOpen = false;
+    });
+  });
   window.on("closed", () => {
     if (trayIconSettingsWindow === window) trayIconSettingsWindow = null;
+    trayIconSettingsDirty = false;
+    trayIconSettingsCloseConfirmed = false;
+    trayIconSettingsClosePromptOpen = false;
   });
   window.webContents.on("did-finish-load", () => sendState(window, currentState()));
   void loadRenderer(window, "tray-icons");
@@ -853,6 +894,21 @@ function registerIpc(): void {
     assertTrustedIpc(event);
     showTrayIconSettings();
   });
+  ipcMain.handle(
+    IPC.setTrayIconSettingsDirty,
+    (event, dirty: boolean) => {
+      assertTrustedIpc(event);
+      if (
+        BrowserWindow.fromWebContents(event.sender) !==
+        trayIconSettingsWindow
+      ) {
+        throw new Error(
+          "Only the taskbar preset window can report unsaved changes.",
+        );
+      }
+      trayIconSettingsDirty = dirty === true;
+    },
+  );
   ipcMain.handle(IPC.quit, (event) => {
     assertTrustedIpc(event);
     isQuitting = true;

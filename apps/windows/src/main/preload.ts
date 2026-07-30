@@ -25,6 +25,8 @@ const bridge: UsageAppBridge = {
   showDashboard: () => ipcRenderer.invoke(IPC.showDashboard) as Promise<void>,
   showTrayIconSettings: () =>
     ipcRenderer.invoke(IPC.showTrayIconSettings) as Promise<void>,
+  setTrayIconSettingsDirty: (dirty: boolean) =>
+    ipcRenderer.invoke(IPC.setTrayIconSettingsDirty, dirty) as Promise<void>,
   quit: () => ipcRenderer.invoke(IPC.quit) as Promise<void>,
   onStateChanged: (listener: (state: DesktopState) => void) => {
     const wrapped = (_event: Electron.IpcRendererEvent, state: DesktopState) => {

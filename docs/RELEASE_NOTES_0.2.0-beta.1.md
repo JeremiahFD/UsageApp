@@ -12,6 +12,8 @@ installer entry.
 - A dedicated taskbar-icon font selector, separate from the interface font
 - Original pixel taskbar fonts plus Segoe UI, Verdana, Tahoma, Arial,
   Trebuchet MS, Georgia, and Consolas
+- A Keep editing / Discard changes warning when the taskbar preset window is
+  closed with unsaved edits
 - Codex and opt-in Claude Code monitoring in one Windows app
 - Separate blue and orange provider tray icons with provider-focused clicks
 - Full dashboard with date filters, graphs, tables, tokens/minute, and

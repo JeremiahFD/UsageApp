@@ -726,13 +726,7 @@ function TrayIconSettingsView({
   ): boolean => !hasUnsavedChanges || window.confirm(message);
 
   useEffect(() => {
-    const handleBeforeUnload = (event: BeforeUnloadEvent): void => {
-      if (confirmDiscardChanges()) return;
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    void window.usageApp.setTrayIconSettingsDirty(hasUnsavedChanges);
   }, [hasUnsavedChanges]);
 
   const applyPreset = (preset: AppSettings["trayIconPreset"]): void => {

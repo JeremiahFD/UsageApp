@@ -16,10 +16,11 @@ Measured from the Beta 1 Windows package:
 | Chromium language packs, uncompressed | 46.65 MB |
 | Complete installed bundle, uncompressed | 348.20 MB |
 | Previous compressed Windows installer | 99,786,851 bytes |
-| Refreshed Beta 1 installer | 100,498,979 bytes |
+| Refreshed Beta 1 installer | 100,500,156 bytes |
 
-The taskbar-font refresh increased the compressed installer by 712,128 bytes
-(about 695.4 KiB). It did not cause the approximately 100 MB baseline size.
+The taskbar-font refresh and unsaved-change close warning increased the
+compressed installer by 713,305 bytes (about 696.6 KiB). They did not cause the
+approximately 100 MB baseline size.
 
 The Android build is separate and is not included in the Windows installer.
 Taskbar font files are not bundled either: the taskbar selector uses fonts

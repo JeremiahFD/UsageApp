@@ -123,6 +123,7 @@ export const IPC = {
   showFlyout: "usageapp:show-flyout",
   showDashboard: "usageapp:show-dashboard",
   showTrayIconSettings: "usageapp:show-tray-icon-settings",
+  setTrayIconSettingsDirty: "usageapp:set-tray-icon-settings-dirty",
   quit: "usageapp:quit",
 } as const;
 
@@ -138,6 +139,7 @@ export interface UsageAppBridge {
   showFlyout(): Promise<void>;
   showDashboard(): Promise<void>;
   showTrayIconSettings(): Promise<void>;
+  setTrayIconSettingsDirty(dirty: boolean): Promise<void>;
   quit(): Promise<void>;
   onStateChanged(listener: (state: DesktopState) => void): () => void;
 }

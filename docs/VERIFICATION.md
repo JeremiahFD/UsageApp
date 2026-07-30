@@ -5,10 +5,13 @@
 Verified on Windows 11 on 2026-07-30:
 
 - `pnpm install --frozen-lockfile`
-- `pnpm test`: 11 core tests and 45 Windows tests passed
+- `pnpm test`: 11 core tests and 47 Windows tests passed
 - `pnpm typecheck`: core, Windows, and Android passed
 - `pnpm build:windows`: production main, preload, and renderer bundles passed
 - `pnpm package:windows`: x64 NSIS packaging passed
+- Installed customizer check: the native red X showed the unsaved-change
+  warning; Keep editing preserved the edit; Discard changes closed the window;
+  and all 11 persisted icon fields matched the active saved preset afterward
 - Public screenshots were rendered from the built interface using synthetic
   data and visually reviewed
 - A privacy scan of source, screenshots, packaged ASAR, and installer found no
@@ -18,9 +21,9 @@ Verified on Windows 11 on 2026-07-30:
 Release artifact:
 
 - `UsageApp-0.2.0-beta.1-x64.exe`
-- Size: `100,498,979` bytes
+- Size: `100,500,156` bytes
 - SHA-256:
-  `EE160493BD21A72669410CE184A7488988CF655A0B69CA1E87E11E48B3A3EED2`
+  `8CFA3BD654A18A5B9F36516CB02AA70F10891D04317B4F9C20B66E7532FF6FD3`
 
 The locally installed Windows beta was started without restarting Windows.
 Hands-on behavior can still vary with notification-area overflow settings,

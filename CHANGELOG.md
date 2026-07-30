@@ -7,6 +7,9 @@ This is a public beta release. Bugs and provider-data limitations are expected.
 - Refreshed this beta in place on 2026-07-30 with a dedicated taskbar-icon
   font selector. The original pixel fonts remain available, alongside Segoe
   UI, Verdana, Tahoma, Arial, Trebuchet MS, Georgia, and Consolas.
+- Added a native warning when closing the taskbar preset window with unsaved
+  changes. Discarding restores the last saved preset instead of leaving the
+  unsaved live preview active.
 - Added opt-in Claude Code quota and local activity monitoring.
 - Added a full dashboard with date ranges, graphs, tables, summary cards,
   tokens/minute, and provider-aware model and effort filters.
