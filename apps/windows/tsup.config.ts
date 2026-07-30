@@ -10,7 +10,7 @@ export default defineConfig({
   target: "node22",
   outDir: "dist/main",
   external: ["electron"],
-  noExternal: ["@usageapp/core"],
+  noExternal: ["@usageapp/core", "opentype.js"],
   sourcemap: true,
   splitting: false,
   clean: false,

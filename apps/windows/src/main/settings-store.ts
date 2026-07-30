@@ -80,7 +80,17 @@ function trayIconTextToneSetting(value: unknown): AppSettings["trayIconTextTone"
 }
 
 function trayIconFontSetting(value: unknown): AppSettings["trayIconFont"] {
-  return value === "bold" || value === "rounded" ? value : "classic";
+  return value === "bold" ||
+    value === "rounded" ||
+    value === "segoe-ui" ||
+    value === "verdana" ||
+    value === "tahoma" ||
+    value === "arial" ||
+    value === "trebuchet-ms" ||
+    value === "georgia" ||
+    value === "consolas"
+    ? value
+    : "classic";
 }
 
 function trayIconColorSetting(value: unknown, fallback: string): string {
@@ -319,7 +329,20 @@ export function sanitizeSettingsPatch(
   if (typeof value.trayIconCodexTextColor === "string" && /^#[0-9a-f]{6}$/i.test(value.trayIconCodexTextColor)) patch.trayIconCodexTextColor = value.trayIconCodexTextColor.toLowerCase();
   if (typeof value.trayIconClaudeTextColor === "string" && /^#[0-9a-f]{6}$/i.test(value.trayIconClaudeTextColor)) patch.trayIconClaudeTextColor = value.trayIconClaudeTextColor.toLowerCase();
   if (typeof value.trayIconMaximizeText === "boolean") patch.trayIconMaximizeText = value.trayIconMaximizeText;
-  if (value.trayIconFont === "classic" || value.trayIconFont === "bold" || value.trayIconFont === "rounded") patch.trayIconFont = value.trayIconFont;
+  if (
+    value.trayIconFont === "classic" ||
+    value.trayIconFont === "bold" ||
+    value.trayIconFont === "rounded" ||
+    value.trayIconFont === "segoe-ui" ||
+    value.trayIconFont === "verdana" ||
+    value.trayIconFont === "tahoma" ||
+    value.trayIconFont === "arial" ||
+    value.trayIconFont === "trebuchet-ms" ||
+    value.trayIconFont === "georgia" ||
+    value.trayIconFont === "consolas"
+  ) {
+    patch.trayIconFont = value.trayIconFont;
+  }
   if (Array.isArray(value.trayIconSavedPresets)) patch.trayIconSavedPresets = trayIconSavedPresetsSetting(value.trayIconSavedPresets);
   if (value.trayIconActiveSavedPresetId === null || typeof value.trayIconActiveSavedPresetId === "string") {
     patch.trayIconActiveSavedPresetId = value.trayIconActiveSavedPresetId;

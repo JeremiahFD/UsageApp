@@ -57,6 +57,22 @@ const resetDateFormatter = new Intl.DateTimeFormat(undefined, {
   timeZoneName: "short",
 });
 
+const TRAY_ICON_FONT_OPTIONS: ReadonlyArray<{
+  value: AppSettings["trayIconFont"];
+  label: string;
+}> = [
+  { value: "bold", label: "Pixel Bold (clearest)" },
+  { value: "classic", label: "Pixel Classic (compact)" },
+  { value: "rounded", label: "Pixel Rounded (lighter)" },
+  { value: "segoe-ui", label: "Segoe UI" },
+  { value: "verdana", label: "Verdana" },
+  { value: "tahoma", label: "Tahoma" },
+  { value: "arial", label: "Arial" },
+  { value: "trebuchet-ms", label: "Trebuchet MS" },
+  { value: "georgia", label: "Georgia" },
+  { value: "consolas", label: "Consolas" },
+];
+
 function resetDate(iso: string | null): string {
   if (!iso) return "Time unavailable";
   const date = new Date(iso);
@@ -804,7 +820,23 @@ function TrayIconSettingsView({
           <label>Fill<select value={settings.trayIconFill} onChange={(event) => customize({ trayIconFill: event.currentTarget.value as "solid" | "dark" | "transparent" })}><option value="solid">Provider color</option><option value="dark">Dark</option><option value="transparent">No fill</option></select></label>
           <label>Border<select value={settings.trayIconBorder} onChange={(event) => customize({ trayIconBorder: event.currentTarget.value as "none" | "thin" | "thick" })}><option value="none">None</option><option value="thin">Thin</option><option value="thick">Thick</option></select></label>
           <label>Center<select value={settings.trayIconContent} onChange={(event) => customize({ trayIconContent: event.currentTarget.value as "percent" | "provider" })}><option value="percent">Numbers only</option><option value="provider">Provider initial (O = OpenAI, C = Claude)</option></select></label>
-          <label>Number style<select value={settings.trayIconFont} onChange={(event) => customize({ trayIconFont: event.currentTarget.value as AppSettings["trayIconFont"] })}><option value="classic">Classic (compact)</option><option value="bold">Bold (most legible)</option><option value="rounded">Rounded (lighter)</option></select></label>
+          <label>
+            Taskbar icon font
+            <select
+              value={settings.trayIconFont}
+              onChange={(event) =>
+                customize({
+                  trayIconFont: event.currentTarget.value as AppSettings["trayIconFont"],
+                })
+              }
+            >
+              {TRAY_ICON_FONT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <label>Text color<select value={settings.trayIconTextTone} onChange={(event) => customize({ trayIconTextTone: event.currentTarget.value as AppSettings["trayIconTextTone"] })}><option value="auto">Automatic contrast</option><option value="provider">Match provider color</option><option value="custom">Custom colors</option><option value="dark">Dark text</option><option value="light">Light text</option></select></label>
         </div>
         <Toggle
@@ -1000,8 +1032,39 @@ function SettingsPanel({
               <option value="both">Codex and Claude</option>
             </select>
           </label>
+          <label className="field-row" htmlFor="taskbar-icon-font">
+            <span>
+              <strong>Taskbar icon font</strong>
+              <small>Used only for the number or provider letter inside the blue and orange tray icons.</small>
+            </span>
+            <select
+              id="taskbar-icon-font"
+              value={settings.trayIconFont}
+              onChange={(event) => {
+                const trayIconFont =
+                  event.currentTarget.value as AppSettings["trayIconFont"];
+                const activePresetId = settings.trayIconActiveSavedPresetId;
+                void onUpdate({
+                  trayIconFont,
+                  trayIconSavedPresets: activePresetId
+                    ? settings.trayIconSavedPresets.map((preset) =>
+                        preset.id === activePresetId
+                          ? { ...preset, font: trayIconFont }
+                          : preset,
+                      )
+                    : settings.trayIconSavedPresets,
+                });
+              }}
+            >
+              {TRAY_ICON_FONT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <div className="field-row">
-            <span><strong>Tray icon appearance</strong><small>Choose a readable preset or customize its shape and center content.</small></span>
+            <span><strong>Taskbar icon appearance</strong><small>Choose a readable preset or customize shape, fill, border, and colors.</small></span>
             <button className="secondary-button" type="button" onClick={onOpenTrayIcons}>Customize</button>
           </div>
           <label className="field-row" htmlFor="widget-provider-display">

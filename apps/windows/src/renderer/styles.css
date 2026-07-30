@@ -171,14 +171,17 @@ select:focus-visible {
 .custom-icon.text-custom b { color: var(--codex-text-color); }
 .custom-icon.claude.text-custom b { color: var(--claude-text-color); }
 .custom-icon.maximize b { width: 48px; height: 48px; font-size: 24px; }
-/*
- * The tray itself draws hand-built bitmap faces, which no web font matches
- * exactly. These approximate each face's weight and width so the picker shows
- * a meaningful difference.
- */
+/* Preview the dedicated taskbar font without changing the interface font. */
 .custom-icon.font-classic b { font-family: "Consolas", "Courier New", monospace; font-weight: 700; letter-spacing: 0.5px; }
 .custom-icon.font-bold b { font-family: "Segoe UI", system-ui, sans-serif; font-weight: 900; letter-spacing: -0.5px; }
 .custom-icon.font-rounded b { font-family: "Segoe UI", system-ui, sans-serif; font-weight: 500; letter-spacing: 0; }
+.custom-icon.font-segoe-ui b { font-family: "Segoe UI", sans-serif; font-weight: 700; }
+.custom-icon.font-verdana b { font-family: "Verdana", sans-serif; font-weight: 700; letter-spacing: -1px; }
+.custom-icon.font-tahoma b { font-family: "Tahoma", sans-serif; font-weight: 700; }
+.custom-icon.font-arial b { font-family: "Arial", sans-serif; font-weight: 700; }
+.custom-icon.font-trebuchet-ms b { font-family: "Trebuchet MS", sans-serif; font-weight: 700; }
+.custom-icon.font-georgia b { font-family: "Georgia", serif; font-weight: 700; letter-spacing: -1px; }
+.custom-icon.font-consolas b { font-family: "Consolas", monospace; font-weight: 700; letter-spacing: -1px; }
 .tray-custom-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .tray-icon-custom label { display: grid; gap: 6px; color: #91a2b8; font-size: 12px; }
 .tray-icon-custom select, .tray-icon-custom input[type="text"] { padding: 8px; color: #e7edf8; border: 1px solid #324257; border-radius: 7px; background: #0c141f; }

@@ -5,7 +5,7 @@
 Verified on Windows 11 on 2026-07-30:
 
 - `pnpm install --frozen-lockfile`
-- `pnpm test`: 11 core tests and 40 Windows tests passed
+- `pnpm test`: 11 core tests and 45 Windows tests passed
 - `pnpm typecheck`: core, Windows, and Android passed
 - `pnpm build:windows`: production main, preload, and renderer bundles passed
 - `pnpm package:windows`: x64 NSIS packaging passed
@@ -18,9 +18,9 @@ Verified on Windows 11 on 2026-07-30:
 Release artifact:
 
 - `UsageApp-0.2.0-beta.1-x64.exe`
-- Size: `99,786,851` bytes
+- Size: `100,498,979` bytes
 - SHA-256:
-  `B6B45F2BBEC05BE942A9F269AAEF804A2A86568979B03E4EEE11B1339FF44426`
+  `EE160493BD21A72669410CE184A7488988CF655A0B69CA1E87E11E48B3A3EED2`
 
 The locally installed Windows beta was started without restarting Windows.
 Hands-on behavior can still vary with notification-area overflow settings,

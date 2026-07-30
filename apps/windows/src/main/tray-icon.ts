@@ -1,6 +1,7 @@
 import { nativeImage, type NativeImage } from "electron";
 import type { TrayIconFont } from "@usageapp/core";
 import { deflateSync } from "node:zlib";
+import { drawSystemTrayFontText } from "./tray-font";
 
 type Color = readonly [number, number, number, number];
 
@@ -109,7 +110,7 @@ function tallScale(length: number, maximize: boolean): number {
   return length >= 3 ? 3 : length === 2 ? 4 : 5;
 }
 
-const FONTS: Record<TrayIconStyle["font"], BitmapFont> = {
+const FONTS: Partial<Record<TrayIconStyle["font"], BitmapFont>> = {
   classic: {
     width: 3,
     height: 5,
@@ -423,13 +424,26 @@ export function createTrayIcon(
       : fill === "solid"
         ? contrastText(providerColor)
         : TEXT;
-  drawText(
+  const maximizeText =
+    style.maximizeText || border === "none" || preset === "colored-text";
+  const systemFontDrawn = drawSystemTrayFontText(
     pixels,
+    WIDTH,
+    HEIGHT,
     label,
     textColor,
-    FONTS[style.font] ?? FONTS.classic,
-    style.maximizeText || border === "none" || preset === "colored-text",
+    style.font,
+    maximizeText,
   );
+  if (!systemFontDrawn) {
+    drawText(
+      pixels,
+      label,
+      textColor,
+      FONTS[style.font] ?? FONTS.bold ?? FONTS.classic!,
+      maximizeText,
+    );
+  }
 
   return nativeImage.createFromBuffer(encodePng(pixels));
 }

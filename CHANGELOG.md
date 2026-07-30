@@ -4,6 +4,9 @@
 
 This is a public beta release. Bugs and provider-data limitations are expected.
 
+- Refreshed this beta in place on 2026-07-30 with a dedicated taskbar-icon
+  font selector. The original pixel fonts remain available, alongside Segoe
+  UI, Verdana, Tahoma, Arial, Trebuchet MS, Georgia, and Consolas.
 - Added opt-in Claude Code quota and local activity monitoring.
 - Added a full dashboard with date ranges, graphs, tables, summary cards,
   tokens/minute, and provider-aware model and effort filters.
@@ -12,7 +15,7 @@ This is a public beta release. Bugs and provider-data limitations are expected.
 - Added exact last-known timestamps beside live usage values.
 - Added a scrollable view for all quota windows and banked resets.
 - Added customizable percentage-warning notifications.
-- Added editable tray presets with fill, border, number style, text color, and
+- Added editable tray presets with fill, border, taskbar font, text color, and
   provider color controls.
 - Added an independent interface font selector plus separate text sizes for the
   flyout, dashboard, and compact widget.

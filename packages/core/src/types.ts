@@ -13,10 +13,22 @@ export type TrayIconFill = "solid" | "dark" | "transparent";
 export type TrayIconBorder = "none" | "thin" | "thick";
 export type TrayIconTextTone = "auto" | "light" | "dark" | "provider" | "custom";
 /**
- * Tray icons are drawn pixel by pixel rather than with a system font, so each
- * option is a hand-built bitmap face rather than a font family name.
+ * Font used only for the tiny Windows notification-area number. The first
+ * three values preserve the original hand-built bitmap faces. The remaining
+ * values use installed Windows font outlines and fall back to the bold bitmap
+ * face if that font is unavailable.
  */
-export type TrayIconFont = "classic" | "bold" | "rounded";
+export type TrayIconFont =
+  | "classic"
+  | "bold"
+  | "rounded"
+  | "segoe-ui"
+  | "verdana"
+  | "tahoma"
+  | "arial"
+  | "trebuchet-ms"
+  | "georgia"
+  | "consolas";
 export type InterfaceFont =
   | "system"
   | "segoe-ui"
@@ -142,7 +154,7 @@ export interface AppSettings {
   flyoutTextScale: 100 | 125 | 150 | 175;
   /** Extra scale for the bottom-right compact widget. */
   widgetTextScale: 100 | 125 | 150 | 175;
-  /** Font used by every Windows surface except the native tray-number bitmap. */
+  /** Font used by every Windows surface except the taskbar notification icon. */
   interfaceFont: InterfaceFont;
   /** One active tray icon, or one labelled icon for each provider. */
   trayProviderDisplay: ProviderDisplayMode;
@@ -157,6 +169,7 @@ export interface AppSettings {
   trayIconCodexTextColor: string;
   trayIconClaudeTextColor: string;
   trayIconMaximizeText: boolean;
+  /** Font used only for the number or provider letter inside the tray icon. */
   trayIconFont: TrayIconFont;
   trayIconSavedPresets: TrayIconSavedPreset[];
   trayIconActiveSavedPresetId: string | null;

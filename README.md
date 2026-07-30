@@ -31,7 +31,10 @@ account limits.
 - Every live usage value includes the exact time it was last known
 - All returned quota windows and banked-reset expiration dates are scrollable
 - Custom warning thresholds and preset percentage notifications
-- Independent interface-font and tray-number-style controls
+- Independent interface and taskbar-icon font controls
+- Taskbar numbers can use the original pixel styles or real Windows fonts,
+  including Segoe UI, Verdana, Tahoma, Arial, Trebuchet MS, Georgia, and
+  Consolas
 - Editable tray presets with fill, border, text color, and provider colors
 - Optional two-provider compact widget above the taskbar
 
@@ -58,9 +61,9 @@ real account information.
 <details>
 <summary>Readable tray and interface customization</summary>
 
-![UsageApp tray number customizer](docs/images/v0.2.0-beta.1-tray-customizer.png)
+![UsageApp taskbar icon customizer](docs/images/v0.2.0-beta.1-tray-customizer.png)
 
-![UsageApp interface font settings](docs/images/v0.2.0-beta.1-font-settings.png)
+![UsageApp separate taskbar and interface font settings](docs/images/v0.2.0-beta.1-font-settings.png)
 
 </details>
 
@@ -75,6 +78,21 @@ real account information.
 The installer is not code-signed, so Windows SmartScreen may show an
 unrecognized-app warning. Verify the release asset against the included
 `SHA256SUMS.txt` before running it.
+
+### Why is the Windows installer about 100 MB?
+
+UsageApp currently uses Electron. The compiled UsageApp interface and main
+process are about 2.14 MB, but the installer must also carry Electron's
+Chromium, Node.js, graphics, internationalization, and Windows runtime files.
+The previous Beta 1 installer was 99,786,851 bytes after compression.
+
+The size is not caused by the Android build, which is produced separately and
+is not included in the Windows EXE. It is also not caused by the taskbar-font
+selector: UsageApp reads installed Windows fonts and does not package their
+font files.
+
+See [Installer size and future options](docs/INSTALLER_SIZE.md) for the measured
+breakdown and possible ways to make a future Windows build smaller.
 
 ## What the data means
 
