@@ -1,44 +1,39 @@
 # UsageApp 0.2.0 Beta 1
 
-UsageApp is still beta software. Expect bugs, incomplete provider data, and
-Windows-specific display differences.
+The visible Beta 1 download was refreshed on 2026-08-07 with a lightweight
+native Windows build, replacing the earlier roughly 100 MB Electron installer
+without creating another public beta version.
 
-This beta was refreshed in place on 2026-07-30. The download and version stay
-at 0.2.0 Beta 1 so this small customization update does not create another
-installer entry.
+## Included
 
-## What's new
-
-- A dedicated taskbar-icon font selector, separate from the interface font
-- Original pixel taskbar fonts plus Segoe UI, Verdana, Tahoma, Arial,
-  Trebuchet MS, Georgia, and Consolas
-- A Keep editing / Discard changes warning when the taskbar preset window is
-  closed with unsaved edits
-- Codex and opt-in Claude Code monitoring in one Windows app
-- Separate blue and orange provider tray icons with provider-focused clicks
-- Full dashboard with date filters, graphs, tables, tokens/minute, and
-  capability-aware model and effort filters
-- Exact last-known timestamps on live usage values
-- Scrollable quota windows and banked-reset details
-- Custom percentage-warning notifications
-- Editable tray presets and separate font controls for tiny tray numbers versus
-  the rest of the interface
-- Optional two-provider compact widget
+- Native Windows taskbar-area number icons and provider-focused popup
+- Codex quota windows, reset times, banked-reset expiries, and last-known times
+- Dashboard with date ranges and available account-level daily token history
+- Provider visibility, tray-number source, text size, font, color, edge,
+  warning, refresh, pin, and startup settings
+- Experimental Claude Code status-line quota integration
+- Per-user installer and portable x64 ZIP
 
 ## Important limitations
 
-- The installer is unsigned and may trigger Windows SmartScreen.
-- The Windows download is about 100 MB because it includes the Electron and
-  Chromium runtime. The Android build and Windows font files are not bundled
-  in it. See [the measured breakdown and future options](https://github.com/JeremiahFD/UsageApp/blob/main/docs/INSTALLER_SIZE.md).
-- Codex account history does not currently include historical model or
-  reasoning-level attribution.
-- Claude plan percentages appear only after an eligible current Claude Code
-  session sends a status-line update.
-- Claude detailed history is locally observed and begins after connection.
+- This is unsigned beta software and may trigger Windows SmartScreen.
+- It has been tested on Windows 11 x64; other Windows configurations still need
+  independent testing.
+- Claude support is experimental and has not been independently tested against
+  a subscribed account. Connect it, restart Claude Code, and submit a prompt
+  before expecting a status-line update.
+- The native beta does not provide Claude history and does not access browser
+  sessions or cookies.
+- Historical Codex model/reasoning attribution, request counts, and tokens per
+  minute are not supplied by the documented feed and are not estimated.
+- There is no updater. Installing a later build over this one performs a
+  per-user upgrade.
+- Uninstall removes the installed app, its shortcuts, and its own startup
+  entry. Settings and cached last-known data remain in
+  `%LOCALAPPDATA%\UsageAppNative` unless removed manually.
 - The Android APK is still in development and is not included.
+- Always verify usage and reset information through the official provider.
+  UsageApp is not the ultimate source of truth.
 
-## Verification
-
-The release asset is accompanied by `SHA256SUMS.txt`. Compare its value before
-running the installer.
+UsageApp was created with AI through continuous hands-on feedback, testing,
+and iteration by JeremiahFD, not from a single prompt. It is MIT-licensed.

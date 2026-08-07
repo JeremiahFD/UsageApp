@@ -4,13 +4,29 @@
 
 This is a public beta release. Bugs and provider-data limitations are expected.
 
+- Refreshed the visible Beta 1 download on 2026-08-07 with the lightweight
+  native Windows build. The 296 KiB installer replaces the
+  previous approximately 100 MB Electron installer without adding another
+  public beta entry.
+- Added provider visibility rules, smoother in-place settings updates,
+  focus-dismiss and always-on-top pinning, precision touchpad scrolling,
+  responsive text sizing, more fonts, and a native dashboard.
+- Added a user-selectable taskbar-number source: lowest remaining, shortest
+  reset window, or longest reset window.
+- Added an explicit official-source disclaimer, untested Claude disclosure,
+  and AI-development disclosure.
+
+### Earlier Electron implementation
+
 - Refreshed this beta in place on 2026-07-30 with a dedicated taskbar-icon
   font selector. The original pixel fonts remain available, alongside Segoe
   UI, Verdana, Tahoma, Arial, Trebuchet MS, Georgia, and Consolas.
 - Added a native warning when closing the taskbar preset window with unsaved
   changes. Discarding restores the last saved preset instead of leaving the
   unsaved live preview active.
-- Added opt-in Claude Code quota and local activity monitoring.
+- Added opt-in Claude Code quota and local activity monitoring to the earlier
+  Electron implementation. The current native beta exposes Claude status-line
+  quota only.
 - Added a full dashboard with date ranges, graphs, tables, summary cards,
   tokens/minute, and provider-aware model and effort filters.
 - Added separate blue Codex and orange Claude tray icons that open the matching

@@ -1,55 +1,52 @@
 # Verification record
 
-## Windows 0.2.0 Beta 1
+## Native Windows 0.2.0 Beta 1 refresh
 
-Verified on Windows 11 on 2026-07-30:
+Verified on Windows 11 x64 on 2026-08-07:
 
-- `pnpm install --frozen-lockfile`
-- `pnpm test`: 11 core tests and 47 Windows tests passed
-- `pnpm typecheck`: core, Windows, and Android passed
-- `pnpm build:windows`: production main, preload, and renderer bundles passed
-- `pnpm package:windows`: x64 NSIS packaging passed
-- Installed customizer check: the native red X showed the unsaved-change
-  warning; Keep editing preserved the edit; Discard changes closed the window;
-  and all 11 persisted icon fields matched the active saved preset afterward
-- Public screenshots were rendered from the built interface using synthetic
-  data and visually reviewed
-- A privacy scan of source, screenshots, packaged ASAR, and installer found no
-  personal home paths, private-repository names, email addresses, or common
-  credential patterns
+- Native build completed with the Windows .NET Framework compiler
+- 38/38 native self-tests passed
+- Automated 100%/125% text, installed-font, flyout, settings, and dashboard
+  layout probes passed
+- Settings-picker and provider/navigation/refresh interaction probes passed
+- Codex-only, Claude-only, and both-provider visibility states passed,
+  including automatic tray-icon dependencies and hidden single-provider
+  switchers
+- A sanitized live Codex probe returned two quota windows, two banked-reset
+  expiry rows, 47 daily activity buckets, and account profile highlights
+- Upgrade installation over the existing native beta completed without a
+  restart and preserved the separate Electron installation
+- Installer scripts parse successfully and the installer, config, uninstaller,
+  Start-menu shortcut, and Apps & Features registration were checked
+- Public screenshots use synthetic demo data
 
-Release artifact:
+Release artifacts:
 
-- `UsageApp-0.2.0-beta.1-x64.exe`
-- Size: `100,500,156` bytes
-- SHA-256:
-  `8CFA3BD654A18A5B9F36516CB02AA70F10891D04317B4F9C20B66E7532FF6FD3`
+- `UsageApp-0.2.0-beta.1-x64.exe`: 303,104 bytes
+- `UsageApp-0.2.0-beta.1-portable-x64.zip`: about 127 KiB
 
-The locally installed Windows beta was started without restarting Windows.
 Hands-on behavior can still vary with notification-area overflow settings,
-display scaling, accessibility settings, and provider session state.
-
-## Android source
-
-`pnpm build:android` passed from the shorter development checkout after the
-Android/core/contract source was content-compared with this public export.
-Building from the longer temporary public-checkout path hit Windows' native
-260-character filename limit.
-
-That build proves the source can produce an APK. It does **not** prove physical
-phone behavior. The Android companion remains unreleased until installation,
-pairing, secure token storage, cached viewing, refresh, accessibility, and
-revocation are tested on physical devices.
+display scaling, accessibility settings, taskbar position, security policy,
+and provider session state. The installer is not Authenticode-signed and may
+trigger SmartScreen. Windows 10 x64, mixed-DPI multi-monitor movement,
+Narrator, high contrast, and live Claude subscription behavior remain
+independent test gates.
 
 ## Provider limits
 
 - Codex history currently lacks historical model and reasoning-level
-  attribution.
-- Claude shared-plan percentages require an eligible live Claude Code
-  status-line update.
-- Claude detailed history is forward-looking local activity after connection,
-  not complete past account history.
-- The installer is not Authenticode-signed and may trigger SmartScreen.
+  attribution, request counts, and tokens-per-minute data.
+- Claude percentages require an eligible live Claude Code status-line update
+  after connection, a new Claude Code session, and a prompt.
+- Claude has not been independently tested against a subscribed account in
+  this native beta, and no Claude history is provided.
+- Always verify displayed values through the official provider source.
+
+## Android source
+
+The Android companion is unreleased. A generated APK would still require
+installation, pairing, secure-token, cache, refresh, accessibility, and
+revocation testing on physical Android devices before a production claim.
 
 ## Previous 0.1.0 beta
 

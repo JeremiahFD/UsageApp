@@ -6,6 +6,9 @@ node_modules/
 dist/
 release/
 artifacts/
+apps/windows-native/out/
+apps/windows-native/out-*/
+apps/windows-native/release/
 *.blockmap
 .old-asar/
 .old-installer-extract/

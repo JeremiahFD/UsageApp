@@ -1,138 +1,68 @@
-# Architecture
+# Architecture and privacy boundaries
 
-UsageApp deliberately keeps provider collection and analytics on the Windows
-PC. It is a read-only monitor: none of its provider paths can redeem resets or
-otherwise mutate an account.
+UsageApp is a read-only monitor. It cannot redeem banked resets or mutate a
+provider account.
+
+## Native Windows beta
 
 ```text
-Codex app-server (private stdio)       Claude Code
-              |                 status line + OTLP/HTTP
-              v                         |
-       Codex provider                   v
-              |                 Claude provider
-              +------------+------------+
-                           |
-                           v
-              provider-aware desktop state
-                 |                    |
-                 v                    v
-        tray/flyout/widget     full-screen dashboard
-                 |
-                 v
-      Codex UsageSnapshot v1 only
-                 |
-                 v
-       paired read-only LAN endpoint
-                 |
-                 v
-          Android Codex viewer
+Codex CLI app-server (private stdio) -> normalized local snapshot -> tray/flyout/dashboard
+
+Claude Code status line -> tokenized loopback receiver -> normalized quota-only cache
 ```
 
-## Codex provider
+### Codex
 
-The desktop process starts the official Codex CLI as a private child process
-using JSONL over stdio. It performs the documented `initialize` handshake and
-reads:
+The app starts the official Codex CLI as a private child process, performs the
+documented app-server handshake, and reads:
 
-- `account/rateLimits/read` for quota windows, reset timestamps, plan and
-  credits, and banked reset details;
-- `account/usage/read` for optional token activity history;
-- `account/rateLimits/updated` as a signal to perform another complete read.
+- `account/rateLimits/read` for quota windows, reset timestamps, plan, and
+  banked-reset details;
+- `account/usage/read` for optional account-level daily token activity; and
+- `account/rateLimits/updated` as a signal to refresh.
 
-Codex remains responsible for sign-in and token refresh. UsageApp never opens
-or parses Codex credential files. The app-server transport is never bound to a
-network interface.
+Codex remains responsible for authentication. UsageApp never reads
+`~/.codex/auth.json`, copies credentials, scrapes ChatGPT, or exposes the
+app-server transport to a network. `availableCount` remains authoritative for
+banked resets; missing expiry detail is displayed as unavailable, not invented.
 
-The protocol is documented but still evolving. The adapter therefore accepts
-nullable fields, discovers all returned limit IDs, derives labels from each
-window's duration, and stores a versioned provider-neutral snapshot.
+The documented activity feed is separate from remaining quota. It currently
+does not supply historical model/reasoning attribution, request counts, or
+tokens per minute, so the native dashboard marks those dimensions unavailable.
 
-`account/usage/read` is activity history, not remaining quota. Its current
-documented account response supplies daily token totals and lifetime summary
-values, but no historical model, reasoning-level, token-category, request, or
-cost dimensions. The desktop capability model records that distinction so the
-dashboard can disable unsupported Codex filters with an explanation instead of
-inventing data.
-
-## Claude Code provider
+### Claude Code
 
 Claude monitoring is off until the user explicitly connects it. UsageApp then
-configures two documented Claude Code extension points:
+installs a reversible wrapper around Claude Code's documented status line. The
+wrapper posts normalized quota fields to a random tokenized URL on a receiver
+bound only to `127.0.0.1`. Payload size is limited, unknown fields are ignored,
+and only quota/reset/freshness data is cached.
 
-- the status-line input for live shared-plan quota percentages, reset
-  timestamps, current model, and current-session context;
-- OpenTelemetry logs delivered over OTLP/HTTP to a receiver bound only to
-  loopback for detailed local Claude Code activity.
+UsageApp preserves the prior Claude status-line command and restores it on
+disconnect or uninstall. A new Claude Code session and prompt are required
+after connecting because Claude Code reads its configuration at startup.
 
-Only sanitized numeric and categorical activity fields needed for the
-dashboard are retained: timestamps, model, effort, input/output/cache token
-counts, request counts, and reported cost when Claude emits them. Prompts,
-responses, credentials, access tokens, account IDs, and unrelated event
-content are neither stored nor forwarded. Unknown fields are not promoted into
-the analytics store.
+This native beta does not read Claude credentials, transcripts, browser
+cookies, or Chrome sessions, and it does not provide Claude activity history.
+Claude quota is marked stale when no current session refreshes it.
 
-Connecting first preserves the relevant existing Claude settings and
-status-line configuration. Disconnecting restores that preserved
-configuration rather than replacing it with a generic default. UsageApp does
-not require a Windows restart, but Claude Code reads this configuration at
-process startup, so a new Claude Code session is required after connecting.
+### Local data
 
-OpenTelemetry collection is forward-looking. Detailed history begins when the
-integration is connected and UsageApp is running; UsageApp does not read
-Claude transcripts or credential files to backfill older activity. Shared
-Claude quota can cover more than the local Claude Code process, so quota and
-locally observed activity are modeled and labeled separately. Status-line
-quota is marked stale when no current Claude session is refreshing it.
+Settings and normalized last-known snapshots are stored under
+`%LOCALAPPDATA%\UsageAppNative`. They contain no provider credentials or raw
+provider responses. Uninstall leaves this user data in place unless the user
+removes it manually.
 
-Claude exposes effort as an activity dimension. UsageApp can group ordinary
-token counts by that effort value, but does not claim to know an exact hidden
-reasoning-token count.
-
-## Analytics capability model
-
-The full-screen dashboard uses the same layout for both providers while
-enabling only dimensions backed by provider data:
-
-| Dimension | Codex | Claude Code |
-| --- | --- | --- |
-| Live quota and resets | App-server rate limits | Status-line updates |
-| Daily token history | Account daily totals | Locally observed OTLP events |
-| Model breakdown/filter | Not supplied | Available after connection |
-| Reasoning or effort filter | Not supplied | Effort, when emitted |
-| Input/output/cache categories | Not supplied | Available when emitted |
-| Requests and reported cost | Not supplied | Available when emitted |
-
-Date presets and custom day/range selection operate on the daily history that
-each provider actually supplies. Unsupported controls remain visible but
-disabled so absence of a dimension cannot be confused with a zero value.
-
-## Windows surface
+## Windows surfaces
 
 Windows does not support arbitrary live text inside a pinned taskbar button.
-UsageApp uses the supported notification area instead:
+UsageApp uses notification-area icons rendered at multiple DPI sizes, a
+taskbar-adjacent popup, and a separate dashboard window. The popup may dismiss
+on outside click or remain always on top for the current session when pinned.
 
-- a dynamically rendered percentage icon and tooltip;
-- a click-open flyout anchored above the taskbar;
-- an optional always-on-top compact corner widget;
-- a resizable, maximizable, full-screen analytics window with provider-themed
-  colors;
-- a reversible per-user launch-at-login setting.
+## Earlier source and Android
 
-## Phone sync
-
-Phone sync is disabled by default. When enabled, the desktop starts a small
-HTTP server and shows a short-lived six-digit pairing code. Successful pairing
-returns a per-device random bearer token; the desktop stores only its SHA-256
-hash. The Android app stores the token through Android Keystore via Expo Secure
-Store.
-
-After pairing, a token can call only `GET /v1/snapshot` and revoke itself with
-`DELETE /v1/device`. Neither endpoint can run Codex, redeem resets, access
-files, or return credentials. The initial MVP uses HTTP on the trusted private
-LAN, so it should not be enabled on public Wi-Fi and must never be exposed
-through router port forwarding. A later remote-access version should add
-authenticated encryption or an end-to-end encrypted relay.
-
-The Android endpoint deliberately remains Codex `UsageSnapshot` v1. The
-provider-aware desktop analytics state, including Claude data, is not exposed
-to the LAN and does not alter the Android contract.
+The repository retains the earlier Electron implementation and unfinished
+Android companion for reference. Their broader analytics and phone-sync code
+is not part of the current native Windows Beta 1 binary. No Android APK is
+included in this release.
